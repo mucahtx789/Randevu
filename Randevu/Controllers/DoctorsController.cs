@@ -4,7 +4,8 @@ using AppointmentSystem.Models;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-
+using BCrypt.Net;
+using Microsoft.EntityFrameworkCore;
 namespace AppointmentSystem.Controllers
 {
     [Route("api/admin/doctors")]
@@ -20,11 +21,50 @@ namespace AppointmentSystem.Controllers
 
         // Doktor kaydı oluşturma
         [HttpPost("create")]
-        public async Task<IActionResult> CreateDoctor([FromBody] Doctor doctor)
+        public async Task<IActionResult> CreateDoctor([FromBody] CreateDoctorRequest model)
         {
+            // Önce kullanıcıyı oluştur
+            var newUser = new User
+            {
+                TcNo = model.TcNo,
+                FullName = $"{model.FirstName} {model.LastName}",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                Role = UserRole.Doctor
+            };
+
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync(); // UserId alınacak
+
+            // Doktoru oluştur
+            var doctor = new Doctor
+            {
+                UserId = newUser.Id,
+                Specialization = model.Specialization,
+                ExperienceLevel = model.ExperienceLevel,
+                IsAvailable = true,
+                
+            };
+
             _context.Doctors.Add(doctor);
             await _context.SaveChangesAsync();
-            return Ok(doctor);
+
+            return Ok(new { Message = "Doktor başarıyla oluşturuldu." });
+        }
+
+        // Doktorları listeleme
+        [HttpGet]
+        public async Task<IActionResult> GetDoctors()
+        {
+            var doctors = await _context.Doctors
+                .Include(d => d.User) // Doktorla ilişkili User bilgilerini dahil et
+                .ToListAsync();
+
+            if (doctors == null || !doctors.Any())
+            {
+                return NotFound("Hiç doktor bulunamadı");
+            }
+
+            return Ok(doctors);
         }
 
         // Doktorun izinlerini ekleme
@@ -100,5 +140,17 @@ namespace AppointmentSystem.Controllers
     {
         public int DoctorId { get; set; }
         public DateTime LeaveDate { get; set; }
+    }
+    // DTO sınıfı
+    public class CreateDoctorRequest
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string TcNo { get; set; }
+        public string Password { get; set; }
+
+        public string Specialization { get; set; }
+        public string ExperienceLevel { get; set; }
+
     }
 }

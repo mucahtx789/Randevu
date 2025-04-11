@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <h1>Hasta Girişi</h1>
-    <input v-model="tcNo" placeholder="TC Kimlik No" />
+    <input v-model="tcNo" placeholder="TC Kimlik No" maxlength="11" />
     <input v-model="password" type="password" placeholder="Şifre" />
     <button @click="login">Giriş Yap</button>
 

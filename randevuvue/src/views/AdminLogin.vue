@@ -1,9 +1,12 @@
 <template>
   <div class="container">
-    <h1>Giriş Yap</h1>
-    <input v-model="tcNo" placeholder="TC Kimlik No" />
+    <h1>Admin Girişi</h1>
+    <input v-model="tcNo" maxlength="11" placeholder="TC Kimlik No" />
     <input v-model="password" type="password" placeholder="Şifre" />
     <button @click="login">Giriş Yap</button>
+
+    <!-- Ana Sayfaya Git butonu her zaman görünür -->
+    <button @click="goToHomePage">Hasta Girişi</button>
   </div>
 </template>
 
@@ -18,6 +21,7 @@
       };
     },
     methods: {
+      // Giriş işlemi
       async login() {
         try {
           const response = await axios.post(
@@ -46,6 +50,12 @@
             alert('Giriş Başarısız');
           }
         }
+      },
+
+      // Ana Sayfaya Yönlendirme
+      goToHomePage() {
+        // HomeView sayfasına yönlendir
+        this.$router.push('/');
       }
     }
   };

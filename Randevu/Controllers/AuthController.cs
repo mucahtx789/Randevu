@@ -27,37 +27,34 @@ namespace AppointmentSystem.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            // Eğer gelen veri eksikse, 400 hatası döndür
-            if (string.IsNullOrEmpty(request.TcNo) || string.IsNullOrEmpty(request.Password))
+            if (string.IsNullOrEmpty(request.TcNo) || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(request.Role))
             {
-                return BadRequest(new { message = "TC Kimlik No ve Şifre zorunludur." });
+                return BadRequest(new { message = "TC Kimlik No, Şifre ve Rol alanları zorunludur." });
             }
 
-            // Kullanıcıyı TC Kimlik No ile arıyoruz
+            // Sadece belirli roller kabul edilecek
+            var validRoles = new[] { "Admin", "Patient", "Doctor" };
+            if (!validRoles.Contains(request.Role))
+            {
+                return BadRequest(new { message = "Geçersiz rol!" });
+            }
+
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.TcNo == request.TcNo);
 
-            // Eğer kullanıcı bulunamadıysa, 401 Unauthorized döndür
-            if (user == null)
+            if (user == null || user.PasswordHash != request.Password)
             {
                 return Unauthorized(new { message = "TC Kimlik No veya Şifre Hatalı" });
             }
 
-            // Şifreyi kontrol et
-            if (user.PasswordHash != request.Password)
-            {
-                return Unauthorized(new { message = "TC Kimlik No veya Şifre Hatalı" });
-            }
+            // Not: İstersen burada user'ın gerçekten bu role sahip olup olmadığını da kontrol edebilirsin.
+            // if (user.Role != request.Role) return Unauthorized(new { message = "Yetkisiz rol!" });
 
-            // Burada gelen role sabit olarak 'Admin' kabul edilecek
-            var role = "Admin"; // Role'ü sabit olarak 'Admin' yapıyoruz
+            var token = GenerateJwtToken(user.Id, request.Role);
 
-            // JWT token oluştur
-            var token = GenerateJwtToken(user.Id, role);
-
-            // Başarılı girişte token ve rolü döndür
-            return Ok(new { token, role });
+            return Ok(new { token, role = request.Role });
         }
+
 
 
         // JWT Token oluşturma işlemi
@@ -98,5 +95,7 @@ namespace AppointmentSystem.Controllers
     {
         public string TcNo { get; set; }
         public string Password { get; set; }
+
+        public string Role { get; set; }
     }
 }
