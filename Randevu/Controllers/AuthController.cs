@@ -42,13 +42,12 @@ namespace AppointmentSystem.Controllers
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.TcNo == request.TcNo);
 
-            if (user == null || user.PasswordHash != request.Password)
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return Unauthorized(new { message = "TC Kimlik No veya Şifre Hatalı" });
             }
 
-            // Not: İstersen burada user'ın gerçekten bu role sahip olup olmadığını da kontrol edebilirsin.
-            // if (user.Role != request.Role) return Unauthorized(new { message = "Yetkisiz rol!" });
+
 
             var token = GenerateJwtToken(user.Id, request.Role);
 

@@ -52,7 +52,6 @@
           experienceLevel: ''
         },
         specializations: [
-          'Aile Hekimliği',
           'Çocuk Sağlığı ve Hastalıkları',
           'Dahiliye (İç Hastalıkları)',
           'Kadın Hastalıkları ve Doğum',
