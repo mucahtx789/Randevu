@@ -32,7 +32,6 @@ namespace AppointmentSystem.Controllers
                 return BadRequest(new { message = "TC Kimlik No, Şifre ve Rol alanları zorunludur." });
             }
 
-            // Sadece belirli roller kabul edilecek
             var validRoles = new[] { "Admin", "Patient", "Doctor" };
             if (!validRoles.Contains(request.Role))
             {
@@ -47,12 +46,37 @@ namespace AppointmentSystem.Controllers
                 return Unauthorized(new { message = "TC Kimlik No veya Şifre Hatalı" });
             }
 
-
-
             var token = GenerateJwtToken(user.Id, request.Role);
 
-            return Ok(new { token, role = request.Role });
+            // Rol bazlı kimlikleri de al
+            int? doctorId = null;
+            int? patientId = null;
+
+            if (request.Role == "Doctor")
+            {
+                doctorId = await _context.Doctors
+                    .Where(d => d.UserId == user.Id)
+                    .Select(d => d.Id)
+                    .FirstOrDefaultAsync();
+            }
+            else if (request.Role == "Patient")
+            {
+                patientId = await _context.Patients
+                    .Where(p => p.UserId == user.Id)
+                    .Select(p => p.Id)
+                    .FirstOrDefaultAsync();
+            }
+
+            return Ok(new
+            {
+                token,
+                role = request.Role,
+                userId = user.Id,
+                doctorId,
+                patientId
+            });
         }
+
 
 
 
@@ -87,14 +111,5 @@ namespace AppointmentSystem.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-    }
-
-    // Kullanıcı giriş istekleri için model
-    public class LoginRequest
-    {
-        public string TcNo { get; set; }
-        public string Password { get; set; }
-
-        public string Role { get; set; }
     }
 }

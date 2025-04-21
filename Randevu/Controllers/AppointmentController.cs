@@ -4,6 +4,9 @@ using AppointmentSystem.Data;
 using AppointmentSystem.Models;
 using System.Globalization;
 using System;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using AppointmentSystem.Models.Dtos;
 
 namespace AppointmentSystem.Controllers
 {
@@ -18,40 +21,59 @@ namespace AppointmentSystem.Controllers
             _context = context;
         }
 
-        [HttpGet("by-patient/{patientId}")]
-        public async Task<IActionResult> GetAppointmentsByPatient(int patientId)
+        [Authorize]
+        [HttpGet("mine")]
+        public async Task<IActionResult> GetMyAppointments()
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                return Unauthorized("Kullanıcı kimliği doğrulanamadı.");
+
+            var patient = await _context.Patients
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (patient == null)
+                return NotFound("Hasta kaydı bulunamadı.");
+
             var appointments = await _context.Appointments
                 .Include(a => a.Doctor)
                     .ThenInclude(d => d.User)
-                .Where(a => a.PatientId == patientId)
+                .Where(a => a.PatientId == patient.Id)
                 .OrderByDescending(a => a.AppointmentTime)
+                .Select(a => new AppointmentDto
+                {
+                    Id = a.Id,
+                    AppointmentTime = a.AppointmentTime,
+                    DoctorFullName = a.Doctor.User.FullName,
+                    Specialization = a.Doctor.Specialization,
+                    ExperienceLevel = a.Doctor.ExperienceLevel
+                })
                 .ToListAsync();
 
             return Ok(appointments);
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> CreateAppointment([FromBody] Appointment appointment)
+        public async Task<IActionResult> CreateAppointment([FromBody] AppointmentCreateDto dto)
         {
             var doctor = await _context.Doctors
                 .Include(d => d.Appointments)
-                .FirstOrDefaultAsync(d => d.Id == appointment.DoctorId);
+                .FirstOrDefaultAsync(d => d.Id == dto.DoctorId);
 
             if (doctor == null)
                 return NotFound("Doktor bulunamadı.");
 
-            // Randevu izin günü mü?
-            var appointmentDate = appointment.AppointmentTime.Date;
+            var appointmentDate = dto.AppointmentTime.Date;
+
             if (doctor.LeaveDays.Contains(appointmentDate))
                 return BadRequest("Bu tarihte doktor izinli.");
 
-            // Hafta sonu mu?
             if (appointmentDate.DayOfWeek == DayOfWeek.Saturday || appointmentDate.DayOfWeek == DayOfWeek.Sunday)
                 return BadRequest("Hafta sonuna randevu alınamaz.");
 
-            // Geçersiz saat mi?
-            var time = appointment.AppointmentTime.TimeOfDay;
+            var time = dto.AppointmentTime.TimeOfDay;
             if (time < TimeSpan.FromHours(8) ||
                 (time >= TimeSpan.FromHours(12) && time < TimeSpan.FromHours(13)) ||
                 time >= TimeSpan.FromHours(17))
@@ -59,21 +81,32 @@ namespace AppointmentSystem.Controllers
                 return BadRequest("Geçersiz randevu saati.");
             }
 
-            // Zaten alınmış mı?
             var exists = await _context.Appointments.AnyAsync(a =>
-                a.DoctorId == appointment.DoctorId &&
-                a.AppointmentTime == appointment.AppointmentTime);
+                a.DoctorId == dto.DoctorId &&
+                a.AppointmentTime == dto.AppointmentTime);
 
             if (exists)
                 return BadRequest("Bu saatte zaten randevu alınmış.");
 
-            appointment.Status = AppointmentStatus.Scheduled;
+            // Veritabanına eklenecek model
+            var appointment = new Appointment
+            {
+                DoctorId = dto.DoctorId,
+                PatientId = dto.PatientId,
+                AppointmentTime = dto.AppointmentTime,
+                Status = AppointmentStatus.Scheduled
+            };
 
             _context.Appointments.Add(appointment);
             await _context.SaveChangesAsync();
 
-            return Ok(appointment);
+            // Yanıt için DTO'ya bilgileri aktar
+            dto.Id = appointment.Id;
+            dto.Status = appointment.Status.ToString();
+
+            return Ok(dto);
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelAppointment(int id)

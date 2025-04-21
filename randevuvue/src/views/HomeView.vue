@@ -31,8 +31,12 @@
 
           // Kontrol: gelen rol gerçekten Patient mi?
           if (response.data.role === 'Patient') {
+            const token = response.data.token;
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('role', response.data.role);  // role bilgisini ekliyoruz
+            localStorage.setItem('patientId', response.data.patientId);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
             this.$router.push('/dashboard'); // Hasta paneline yönlendirme
           } else {
             alert('Yetkisiz giriş!');

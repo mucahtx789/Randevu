@@ -7,6 +7,7 @@
       <p>⏰ <strong>12:00 – 13:00 öğle arasında</strong> ve <strong>dolu saatler</strong> seçilemez.</p>
     </div>
 
+    <!-- Branş seçimi -->
     <div class="mb-4">
       <label class="block mb-1 font-medium">Branş Seçin:</label>
       <select v-model="selectedBranch" @change="fetchDoctors" class="w-full border rounded p-2">
@@ -15,6 +16,7 @@
       </select>
     </div>
 
+    <!-- Doktor seçimi -->
     <div class="mb-4" v-if="doctors.length > 0">
       <label class="block mb-1 font-medium">Doktor Seçin:</label>
       <select v-model="selectedDoctorId" @change="fetchLeaveDays" class="w-full border rounded p-2">
@@ -25,32 +27,41 @@
       </select>
     </div>
 
+    <!-- Tarih seçimi -->
     <div class="mb-4" v-if="selectedDoctorId">
       <label class="block mb-1 font-medium">Tarih Seçin:</label>
-      <input type="date" v-model="selectedDate" :min="minDate" @change="fetchAvailableHours" class="w-full border rounded p-2" />
+      <input type="date"
+             v-model="selectedDate"
+             :min="minDate"
+             class="w-full border rounded p-2"
+             :class="{ 'border-red-500': !isDateSelectable }" />
     </div>
 
-    <div class="mb-4" v-if="availableHours.length > 0">
-      <label class="block mb-1 font-medium">Randevu Saati Seçin:</label>
-      <div class="grid grid-cols-3 gap-2">
-        <button v-for="hour in availableHours"
-                :key="hour.time"
-                :disabled="hour.disabled"
-                @click="selectTime(hour.time)"
-                :class="[ 'p-2 rounded text-center',
-                  hour.disabled ? 'bg-gray-300 cursor-not-allowed' :
-                  selectedTime === hour.time ? 'bg-green-500 text-white' :
-                  'bg-white border hover:bg-green-100' ]">
-          {{ hour.time }}
-        </button>
-      </div>
+    <!-- Saatler -->
+    <div class="grid grid-cols-3 gap-2">
+      <button v-for="hour in availableHours"
+              :key="hour.time"
+              :disabled="hour.disabled"
+              @click="selectTime(hour.time)"
+              :class="[ 'p-2 rounded text-center transition duration-200',
+                        hour.disabled
+                          ? 'bg-gray-300 cursor-not-allowed'
+                          : selectedTime === hour.time
+                            ? 'selected'
+                            : 'bg-white border hover:bg-green-100'
+              ]">
+        {{ hour.time }}
+      </button>
     </div>
 
+    <!-- Kaydet -->
     <button @click="submitAppointment"
             :disabled="!selectedDoctorId || !selectedDate || !selectedTime"
             class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
       Randevuyu Kaydet
     </button>
+    <!-- Dashboard git -->
+    <button @click="goToDashboard"> Randevu Listesine Geri Dön</button>
   </div>
 </template>
 
@@ -86,6 +97,7 @@
         selectedTime: '',
         availableHours: [],
         leaveDays: [],
+        isDateSelectable: true,
         minDate: new Date().toISOString().split('T')[0],
       };
     },
@@ -95,16 +107,11 @@
         try {
           const encodedBranch = encodeURIComponent(this.selectedBranch);
           const res = await axios.get(`http://localhost:5229/api/appointments/by-specialization/${encodedBranch}`);
-
-          // API'den gelen doktorları güncelleme
           this.doctors = res.data.map(doctor => ({
-            id: doctor.doctorId,              // Doktor ID
-            fullName: doctor.fullName,   // Doktorun adı
-            experienceLevel: doctor.experienceLevel // Deneyim seviyesi
+            id: doctor.doctorId,
+            fullName: doctor.fullName,
+            experienceLevel: doctor.experienceLevel
           }));
-          console.log('Fetched Doctors:', this.doctors);
-          console.log('Selected Doctor ID after fetch:', this.selectedDoctorId);
-          // Seçilen doktoru sıfırla ve izinleri temizle
           this.selectedDoctorId = null;
           this.selectedDate = '';
           this.availableHours = [];
@@ -115,12 +122,10 @@
         }
       },
       async fetchLeaveDays() {
-        // Eğer doktor ID seçilmemişse, izne geçmeyelim
         if (!this.selectedDoctorId) return;
-
         try {
           const res = await axios.get(`http://localhost:5229/api/admin/doctors/leaves/${this.selectedDoctorId}`);
-          this.leaveDays = res.data.map(d => d.split('T')[0]); // Yalnızca tarih kısmını al
+          this.leaveDays = res.data.map(d => d.split('T')[0]);
           this.selectedDate = '';
           this.availableHours = [];
         } catch (error) {
@@ -152,7 +157,9 @@
         this.selectedTime = time;
       },
       async submitAppointment() {
+        const patientId = localStorage.getItem('patientId');
         const appointment = {
+          patientId: parseInt(patientId),
           doctorId: this.selectedDoctorId,
           appointmentTime: `${this.selectedDate}T${this.selectedTime}:00`
         };
@@ -166,11 +173,50 @@
           this.selectedDate = '';
           this.selectedTime = '';
           this.availableHours = [];
+          this.$router.push('/dashboard');
         } catch (error) {
-          console.error('Randevu oluşturma hatası:', error);
-          alert('Randevu oluşturulurken bir hata oluştu!');
+          console.error('❌ Randevu oluşturma hatası:', error);
+          if (error.response) {
+            console.warn("📛 Doğrulama hataları:", error.response.data.errors);
+            alert('Hata: ' + JSON.stringify(error.response.data.errors, null, 2));
+          } else {
+            alert('Beklenmeyen bir hata oluştu.');
+          }
         }
+      },
+      goToDashboard() {
+        this.$router.push('/dashboard');
       }
+    },
+    watch: {
+      selectedDate(newDate) {
+        if (!newDate) return;
+        const day = new Date(newDate).getDay();
+        const isWeekend = day === 0 || day === 6;
+        const isLeaveDay = this.leaveDays.includes(newDate);
+
+        this.isDateSelectable = !(isWeekend || isLeaveDay);
+
+        if (!this.isDateSelectable) {
+          alert("Seçtiğiniz gün hafta sonu ya da doktorun izinli olduğu bir gün.");
+          this.selectedDate = '';
+          this.availableHours = [];
+        } else {
+          this.fetchAvailableHours();
+        }
+      },
+      
     }
   };
 </script>
+
+<style scoped>
+  /* Saatler seçildiğinde görünüm */
+  button.selected {
+    background-color: #48BB78;
+    color: white;
+    font-weight: bold;
+    transform: scale(1.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+</style>

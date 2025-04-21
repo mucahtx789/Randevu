@@ -39,6 +39,7 @@
           if (response.data.role === 'Admin') {
             localStorage.setItem('token', response.data.token);  // Token'ı localStorage'a kaydediyoruz
             localStorage.setItem('role', response.data.role);  // role bilgisini ekliyoruz
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             this.$router.push('/doctor-list');  // Başka bir sayfaya yönlendirme yapıyoruz
           } else {
             alert('Yetkisiz giriş!');

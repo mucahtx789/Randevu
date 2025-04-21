@@ -8,9 +8,12 @@
 
     <ul>
       <li v-for="appointment in appointments" :key="appointment.id">
-        <strong>{{ formatDateTime(appointment.dateTime) }}</strong> -
-        {{ appointment.doctorName }}
+        <strong>{{ formatDateTime(appointment.appointmentTime) }}</strong><br>
+        Uzmanlık: {{ appointment.specialization }}<br>
+        Deneyim: {{ appointment.experienceLevel }}<br>
+        Doktor: {{ appointment.doctorFullName }}<br>
         <button @click="cancelAppointment(appointment.id)">İptal Et</button>
+        <hr>
       </li>
     </ul>
   </div>
