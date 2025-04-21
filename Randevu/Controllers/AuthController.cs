@@ -67,7 +67,7 @@ namespace AppointmentSystem.Controllers
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             if (string.IsNullOrEmpty(jwtKey))
             {
-                throw new ArgumentNullException("Jwt:Key", "JWT Anahtarı 'Jwt:Key' yapılandırma dosyasından alınamıyor. böyle kodun aq");
+                throw new ArgumentNullException("Jwt:Key", "JWT Anahtarı 'Jwt:Key' yapılandırma dosyasından alınamıyor.");
             }
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
