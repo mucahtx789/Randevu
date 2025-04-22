@@ -32,7 +32,7 @@
       <label class="block mb-1 font-medium">Tarih Seçin:</label>
       <input type="date"
              v-model="selectedDate"
-             :min="minDate"
+             :min="adjustedMinDate"
              class="w-full border rounded p-2"
              :class="{ 'border-red-500': !isDateSelectable }" />
     </div>
@@ -61,7 +61,7 @@
       Randevuyu Kaydet
     </button>
     <!-- Dashboard git -->
-    <button @click="goToDashboard"> Randevu Listesine Geri Dön</button>
+    <button @click="goToDashboard" class="mt-2 text-sm underline text-gray-600">Randevu Listesine Geri Dön</button>
   </div>
 </template>
 
@@ -72,23 +72,11 @@
     data() {
       return {
         branches: [
-          'Çocuk Sağlığı ve Hastalıkları',
-          'Dahiliye (İç Hastalıkları)',
-          'Kadın Hastalıkları ve Doğum',
-          'Kardiyoloji',
-          'Kulak Burun Boğaz (KBB)',
-          'Ortopedi ve Travmatoloji',
-          'Göz Hastalıkları',
-          'Nöroloji',
-          'Psikiyatri',
-          'Cildiye (Dermatoloji)',
-          'Göğüs Hastalıkları',
-          'Üroloji',
-          'Genel Cerrahi',
-          'Beyin ve Sinir Cerrahisi',
-          'Fizik Tedavi ve Rehabilitasyon',
-          'Enfeksiyon Hastalıkları',
-          'Anesteziyoloji ve Reanimasyon'
+          'Çocuk Sağlığı ve Hastalıkları', 'Dahiliye (İç Hastalıkları)', 'Kadın Hastalıkları ve Doğum',
+          'Kardiyoloji', 'Kulak Burun Boğaz (KBB)', 'Ortopedi ve Travmatoloji', 'Göz Hastalıkları',
+          'Nöroloji', 'Psikiyatri', 'Cildiye (Dermatoloji)', 'Göğüs Hastalıkları', 'Üroloji',
+          'Genel Cerrahi', 'Beyin ve Sinir Cerrahisi', 'Fizik Tedavi ve Rehabilitasyon',
+          'Enfeksiyon Hastalıkları', 'Anesteziyoloji ve Reanimasyon'
         ],
         doctors: [],
         selectedBranch: '',
@@ -97,11 +85,26 @@
         selectedTime: '',
         availableHours: [],
         leaveDays: [],
-        isDateSelectable: true,
-        minDate: new Date().toISOString().split('T')[0],
+        isDateSelectable: true
       };
     },
+
+    computed: {
+      adjustedMinDate() {
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        // Eğer saat 16:30'dan geçtiyse, bugünü devre dışı bırak
+        if (hour > 16 || (hour === 16 && minute >= 30)) {
+          const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+          return tomorrow.toISOString().split('T')[0];
+        }
+
+        return now.toISOString().split('T')[0];
+      }
+    },
     methods: {
+      //branşa göre doktor getirme
       async fetchDoctors() {
         if (!this.selectedBranch) return;
         try {
@@ -117,10 +120,10 @@
           this.availableHours = [];
           this.leaveDays = [];
         } catch (error) {
-          console.error('Seçili branşta doktor yok:', error);
-          alert('Seçili branşta doktor yok.');
+          alert('Seçili branşta doktor bulunamadı.');
         }
       },
+      //doktor izin günlerini alma
       async fetchLeaveDays() {
         if (!this.selectedDoctorId) return;
         try {
@@ -129,33 +132,48 @@
           this.selectedDate = '';
           this.availableHours = [];
         } catch (error) {
-          console.error('İzin günleri alınamadı:', error);
-          alert('Doktor izin günleri yüklenemedi.');
+          alert('Doktor izin günleri alınamadı.');
         }
       },
+   
       async fetchAvailableHours() {
         if (!this.selectedDate || !this.selectedDoctorId) return;
 
-        const day = new Date(this.selectedDate).getDay();
+        const selected = new Date(this.selectedDate);
+        const now = new Date();
+
+        const day = selected.getDay();
+        const isToday = selected.toDateString() === now.toDateString();
+
         if (day === 0 || day === 6 || this.leaveDays.includes(this.selectedDate)) {
           this.availableHours = [];
           return;
         }
 
         try {
+          //doktor seçili tarihteki randevularını alma
           const res = await axios.get(`http://localhost:5229/api/appointments/available-times?doctorId=${this.selectedDoctorId}&date=${this.selectedDate}`);
-          this.availableHours = res.data.times.map(time => ({
+
+          let times = res.data.times;
+          // Eğer bugün ise: sadece 1 saat sonrası saatleri göster
+          if (isToday) {
+            const nowPlus1Hour = new Date(now.getTime() + 60 * 60 * 1000);
+            const cutoffTime = nowPlus1Hour.toTimeString().substring(0, 5);
+            times = times.filter(t => t >= cutoffTime);
+          }
+
+          this.availableHours = times.map(time => ({
             time,
             disabled: false
           }));
         } catch (error) {
-          console.error('Saatler alınamadı:', error);
-          alert('Uygun saatler yüklenemedi.');
+          alert('Uygun saatler alınamadı.');
         }
       },
       selectTime(time) {
         this.selectedTime = time;
       },
+      //kayıt etme
       async submitAppointment() {
         const patientId = localStorage.getItem('patientId');
         const appointment = {
@@ -175,19 +193,14 @@
           this.availableHours = [];
           this.$router.push('/dashboard');
         } catch (error) {
-          console.error('❌ Randevu oluşturma hatası:', error);
-          if (error.response) {
-            console.warn("📛 Doğrulama hataları:", error.response.data.errors);
-            alert('Hata: ' + JSON.stringify(error.response.data.errors, null, 2));
-          } else {
-            alert('Beklenmeyen bir hata oluştu.');
-          }
+          alert('Randevu oluşturulamadı.');
         }
       },
       goToDashboard() {
         this.$router.push('/dashboard');
       }
     },
+     //seçilen tarihin izin günü kontrolü
     watch: {
       selectedDate(newDate) {
         if (!newDate) return;
@@ -204,8 +217,7 @@
         } else {
           this.fetchAvailableHours();
         }
-      },
-      
+      }
     }
   };
 </script>

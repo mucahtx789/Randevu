@@ -30,13 +30,13 @@
               TcNo: this.tcNo,
               Password: this.password,
               Role: 'Admin'  // Sabit olarak Admin rolünü gönderiyoruz
-            }
-          );
+            });
 
           console.log('Login successful', response.data); // API'den dönen yanıtı kontrol edin
 
           // Kullanıcı rolüne göre işlem yapılıyor
           if (response.data.role === 'Admin') {
+            const token = response.data.token;
             localStorage.setItem('token', response.data.token);  // Token'ı localStorage'a kaydediyoruz
             localStorage.setItem('role', response.data.role);  // role bilgisini ekliyoruz
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;

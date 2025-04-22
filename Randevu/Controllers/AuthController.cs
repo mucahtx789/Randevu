@@ -27,6 +27,7 @@ namespace AppointmentSystem.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            // var kanser = BCrypt.Net.BCrypt.HashPassword("123"); manuel admin kullanıcısı oluştururken sql girilcek şifre
             if (string.IsNullOrEmpty(request.TcNo) || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(request.Role))
             {
                 return BadRequest(new { message = "TC Kimlik No, Şifre ve Rol alanları zorunludur." });
@@ -43,6 +44,8 @@ namespace AppointmentSystem.Controllers
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
+              
+                
                 return Unauthorized(new { message = "TC Kimlik No veya Şifre Hatalı" });
             }
 
@@ -83,10 +86,7 @@ namespace AppointmentSystem.Controllers
         // JWT Token oluşturma işlemi
         private string GenerateJwtToken(int userId, string role)
         {
-            if (string.IsNullOrEmpty(role)) // role parametresi kontrol ediliyor
-            {
-                role = "Admin";  // Eğer null veya boşsa, Admin olarak ayarlanıyor
-            }
+           
             var jwtKey = _config["Jwt:Key"];
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             if (string.IsNullOrEmpty(jwtKey))
