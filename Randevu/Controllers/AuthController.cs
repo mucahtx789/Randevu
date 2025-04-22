@@ -27,7 +27,7 @@ namespace AppointmentSystem.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            // var kanser = BCrypt.Net.BCrypt.HashPassword("123"); manuel admin kullanıcısı oluştururken sql girilcek şifre
+            // var passwordhash = BCrypt.Net.BCrypt.HashPassword("123"); manuel admin kullanıcısı oluştururken sql girilcek şifre
             if (string.IsNullOrEmpty(request.TcNo) || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(request.Role))
             {
                 return BadRequest(new { message = "TC Kimlik No, Şifre ve Rol alanları zorunludur." });
