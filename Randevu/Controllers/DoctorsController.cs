@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
+using Randevu.Models.Dtos;
 namespace AppointmentSystem.Controllers
 {
     [Route("api/admin/doctors")]
@@ -56,10 +57,18 @@ namespace AppointmentSystem.Controllers
         public async Task<IActionResult> GetDoctors()
         {
             var doctors = await _context.Doctors
-                .Include(d => d.User) // Doktorla ilişkili User bilgilerini dahil et
+                .Include(d => d.User)
+                .Select(d => new DoctorDtoGet
+                {
+                    Id = d.Id,
+                    FullName = d.User.FullName,
+                    Specialization = d.Specialization,
+                    ExperienceLevel = d.ExperienceLevel,
+                    LeaveDays = d.LeaveDays
+                })
                 .ToListAsync();
 
-            if (doctors == null || !doctors.Any())
+            if (!doctors.Any())
             {
                 return NotFound("Hiç doktor bulunamadı");
             }
@@ -136,21 +145,5 @@ namespace AppointmentSystem.Controllers
         }
     }
 
-    public class DoctorLeaveRequest
-    {
-        public int DoctorId { get; set; }
-        public DateTime LeaveDate { get; set; }
-    }
-    // DTO sınıfı
-    public class CreateDoctorRequest
-    {
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string TcNo { get; set; }
-        public string Password { get; set; }
-
-        public string Specialization { get; set; }
-        public string ExperienceLevel { get; set; }
-
-    }
+    
 }

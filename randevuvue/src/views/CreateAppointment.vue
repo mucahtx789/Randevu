@@ -1,25 +1,25 @@
 <template>
-  <div class="p-4 max-w-lg mx-auto">
-    <h1 class="text-xl font-semibold mb-4">Randevu Oluştur</h1>
+  <div class="container">
+    <h1>Randevu Oluştur</h1>
 
-    <div class="mb-4 text-sm text-gray-700 bg-yellow-100 p-2 rounded">
+    <div class="info-box">
       <p>🗓️ <strong>İzinli günler</strong> ve <strong>hafta sonları</strong> seçilemez.</p>
       <p>⏰ <strong>12:00 – 13:00 öğle arasında</strong> ve <strong>dolu saatler</strong> seçilemez.</p>
     </div>
 
     <!-- Branş seçimi -->
-    <div class="mb-4">
-      <label class="block mb-1 font-medium">Branş Seçin:</label>
-      <select v-model="selectedBranch" @change="fetchDoctors" class="w-full border rounded p-2">
+    <div class="input-group">
+      <label class="input-label">Branş Seçin:</label>
+      <select v-model="selectedBranch" @change="fetchDoctors" class="input-field">
         <option disabled value="">-- Branş Seçin --</option>
         <option v-for="branch in branches" :key="branch" :value="branch">{{ branch }}</option>
       </select>
     </div>
 
     <!-- Doktor seçimi -->
-    <div class="mb-4" v-if="doctors.length > 0">
-      <label class="block mb-1 font-medium">Doktor Seçin:</label>
-      <select v-model="selectedDoctorId" @change="fetchLeaveDays" class="w-full border rounded p-2">
+    <div class="input-group" v-if="doctors.length > 0">
+      <label class="input-label">Doktor Seçin:</label>
+      <select v-model="selectedDoctorId" @change="fetchLeaveDays" class="input-field">
         <option disabled value="">-- Doktor Seçin --</option>
         <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
           {{ doctor.fullName }} - {{ doctor.experienceLevel }}
@@ -28,22 +28,22 @@
     </div>
 
     <!-- Tarih seçimi -->
-    <div class="mb-4" v-if="selectedDoctorId">
-      <label class="block mb-1 font-medium">Tarih Seçin:</label>
+    <div class="input-group" v-if="selectedDoctorId">
+      <label class="input-label">Tarih Seçin:</label>
       <input type="date"
              v-model="selectedDate"
              :min="adjustedMinDate"
-             class="w-full border rounded p-2"
+             class="input-field"
              :class="{ 'border-red-500': !isDateSelectable }" />
     </div>
 
     <!-- Saatler -->
-    <div class="grid grid-cols-3 gap-2">
+    <div class="hour-selection">
       <button v-for="hour in availableHours"
               :key="hour.time"
               :disabled="hour.disabled"
               @click="selectTime(hour.time)"
-              :class="[ 'p-2 rounded text-center transition duration-200',
+              :class="[ 'time-button',
                         hour.disabled
                           ? 'bg-gray-300 cursor-not-allowed'
                           : selectedTime === hour.time
@@ -57,11 +57,12 @@
     <!-- Kaydet -->
     <button @click="submitAppointment"
             :disabled="!selectedDoctorId || !selectedDate || !selectedTime"
-            class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
+            class="save-button">
       Randevuyu Kaydet
     </button>
+
     <!-- Dashboard git -->
-    <button @click="goToDashboard" class="mt-2 text-sm underline text-gray-600">Randevu Listesine Geri Dön</button>
+    <button @click="goToDashboard" class="back-to-dashboard">Randevu Listesine Geri Dön</button>
   </div>
 </template>
 
@@ -88,13 +89,11 @@
         isDateSelectable: true
       };
     },
-
     computed: {
       adjustedMinDate() {
         const now = new Date();
         const hour = now.getHours();
         const minute = now.getMinutes();
-        // Eğer saat 16:30'dan geçtiyse, bugünü devre dışı bırak
         if (hour > 16 || (hour === 16 && minute >= 30)) {
           const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
           return tomorrow.toISOString().split('T')[0];
@@ -104,7 +103,13 @@
       }
     },
     methods: {
-      //branşa göre doktor getirme
+      // Tarihi sıfırlayarak (00:00) sadece gün kısmını döndüren fonksiyon
+      normalizeDate(date) {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0); // Saat kısmını sıfırlıyoruz
+        return d.toISOString().split('T')[0]; // ISO formatında sadece tarih kısmını döndürüyoruz
+      },
+
       async fetchDoctors() {
         if (!this.selectedBranch) return;
         try {
@@ -123,46 +128,31 @@
           alert('Seçili branşta doktor bulunamadı.');
         }
       },
-      //doktor izin günlerini alma
+
       async fetchLeaveDays() {
         if (!this.selectedDoctorId) return;
         try {
           const res = await axios.get(`http://localhost:5229/api/admin/doctors/leaves/${this.selectedDoctorId}`);
-          this.leaveDays = res.data.map(d => d.split('T')[0]);
+          this.leaveDays = res.data.map(d => this.normalizeDate(d)); // Tarihleri normalize ediyoruz
           this.selectedDate = '';
           this.availableHours = [];
         } catch (error) {
           alert('Doktor izin günleri alınamadı.');
         }
       },
-   
+
       async fetchAvailableHours() {
         if (!this.selectedDate || !this.selectedDoctorId) return;
 
-        const selected = new Date(this.selectedDate);
-        const now = new Date();
-
-        const day = selected.getDay();
-        const isToday = selected.toDateString() === now.toDateString();
-
-        if (day === 0 || day === 6 || this.leaveDays.includes(this.selectedDate)) {
+        const normalizedDate = this.normalizeDate(this.selectedDate); // Tarih normalizasyonu
+        if (this.leaveDays.includes(normalizedDate)) {
           this.availableHours = [];
           return;
         }
 
         try {
-          //doktor seçili tarihteki randevularını alma
-          const res = await axios.get(`http://localhost:5229/api/appointments/available-times?doctorId=${this.selectedDoctorId}&date=${this.selectedDate}`);
-
-          let times = res.data.times;
-          // Eğer bugün ise: sadece 1 saat sonrası saatleri göster
-          if (isToday) {
-            const nowPlus1Hour = new Date(now.getTime() + 60 * 60 * 1000);
-            const cutoffTime = nowPlus1Hour.toTimeString().substring(0, 5);
-            times = times.filter(t => t >= cutoffTime);
-          }
-
-          this.availableHours = times.map(time => ({
+          const res = await axios.get(`http://localhost:5229/api/appointments/available-times?doctorId=${this.selectedDoctorId}&date=${normalizedDate}`);
+          this.availableHours = res.data.times.map(time => ({
             time,
             disabled: false
           }));
@@ -170,10 +160,11 @@
           alert('Uygun saatler alınamadı.');
         }
       },
+
       selectTime(time) {
         this.selectedTime = time;
       },
-      //kayıt etme
+
       async submitAppointment() {
         const patientId = localStorage.getItem('patientId');
         const appointment = {
@@ -196,17 +187,17 @@
           alert('Randevu oluşturulamadı.');
         }
       },
+
       goToDashboard() {
         this.$router.push('/dashboard');
       }
     },
-     //seçilen tarihin izin günü kontrolü
     watch: {
       selectedDate(newDate) {
         if (!newDate) return;
-        const day = new Date(newDate).getDay();
-        const isWeekend = day === 0 || day === 6;
-        const isLeaveDay = this.leaveDays.includes(newDate);
+        const normalizedDate = this.normalizeDate(newDate); // Tarihi normalize et
+        const isWeekend = new Date(normalizedDate).getDay() === 0 || new Date(normalizedDate).getDay() === 6;
+        const isLeaveDay = this.leaveDays.includes(normalizedDate);
 
         this.isDateSelectable = !(isWeekend || isLeaveDay);
 
@@ -223,12 +214,127 @@
 </script>
 
 <style scoped>
-  /* Saatler seçildiğinde görünüm */
-  button.selected {
-    background-color: #48BB78;
-    color: white;
-    font-weight: bold;
-    transform: scale(1.1);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  .container {
+    max-width: 600px;
+    margin: 100px auto;
+    padding: 30px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
   }
+
+  h1 {
+    margin-bottom: 30px;
+    color: #1976d2;
+    font-size: 24px;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .info-box {
+    margin-bottom: 20px;
+    background-color: #fff3cd;
+    padding: 10px;
+    border-radius: 5px;
+  }
+
+  .input-group {
+    margin-bottom: 20px;
+  }
+
+  .input-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-align: left;
+    display: block;
+  }
+
+  .input-field {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+  }
+
+  .hour-selection {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .time-button {
+    padding: 12px 20px;
+    text-align: center;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    font-size: 16px;
+    background-color: white; /* Normal buton rengi */
+    color: black; /* Yazı rengi siyah */
+    border-radius: 5px;
+    font-family: 'Arial', sans-serif;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+    /* Seçili buton rengi */
+    .time-button.selected {
+      background-color: #48BB78; /* Yeşil arka plan */
+      color: white;
+      font-weight: bold;
+      transform: scale(1.05);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Hover efektini  */
+    .time-button:hover {
+      background-color: yellow; /* Arka plan beyaz */
+      color: black; /* Yazı rengi siyah */
+      transform: none; /* Hover'da büyüme yok */
+    }
+
+    .time-button.bg-gray-300 {
+      background-color: #f2f2f2;
+    }
+
+    /* Disabled butonlar */
+    .time-button:disabled {
+      background-color: #f2f2f2;
+      cursor: not-allowed;
+      color: #999;
+    }
+
+  .save-button {
+    background-color: #2196f3;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 20px;
+    width: 100%;
+    font-size: 16px;
+    font-family: 'Arial', sans-serif;
+  }
+
+    .save-button:hover {
+      background-color: #1976d2;
+    }
+
+  .back-to-dashboard {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #1976d2;
+    padding: 12px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: color 0.3s, font-weight 0.3s; /* Hover efekti için geçiş */
+  }
+
+    .back-to-dashboard:hover {
+      color: #1565c0; /* Hover durumunda daha koyu mavi renk */
+      font-weight: bold; /* Hover durumunda yazıyı kalınlaştırdım */
+    }
 </style>
+
+

@@ -96,15 +96,44 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
+  /* Container, butonlar ve listeyi aynı stile getirdik */
   .container {
     max-width: 600px;
-    margin: auto;
+    margin: 100px auto;
+    padding: 30px;
+    background-color: rgba(255, 255, 255, 0.95); /* Yarı saydam beyaz */
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
   }
 
-  button {
-    margin-left: 10px;
+  /* Başlık */
+  h1 {
+    margin-bottom: 30px;
+    color: #1976d2; /* Mavi tema rengi */
+    font-size: 24px;
   }
+
+  /* Butonlar */
+  button {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 5px;
+    width: 100%;
+  }
+
+    button:hover {
+      background-color: #1976d2;
+    }
+
+  /* Randevuların Durumuna Göre Arkaplan Renkleri */
   li.past {
     background-color: #f8d7da; /* kırmızımsı */
     padding: 10px;
@@ -119,5 +148,4 @@ export default {
     background-color: #d4edda; /* yeşilimsi */
     padding: 10px;
   }
-
 </style>

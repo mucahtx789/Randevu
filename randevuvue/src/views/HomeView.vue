@@ -4,9 +4,9 @@
     <input v-model="tcNo" placeholder="TC Kimlik No" maxlength="11" />
     <input v-model="password" type="password" placeholder="Şifre" />
     <button @click="login">Giriş Yap</button>
-
+    <button @click="goToRegister">Hasta Kayıt </button>
     <button @click="goToAdminLogin">Admin Girişi</button>
-    <button @click="goToRegister">Kayıt Ol</button>
+
   </div>
 </template>
 
@@ -60,14 +60,52 @@
   };
 </script>
 
-<style>
+<style scoped>
+  /* Hasta Girişi sayfası için container */
   .container {
-    max-width: 300px;
-    margin: auto;
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 30px;
+    background-color: rgba(255, 255, 255, 0.95); /* Yarı saydam beyaz */
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     text-align: center;
   }
 
-  button {
-    margin-top: 10px;
+  /* Başlık */
+  h1 {
+    margin-bottom: 30px;
+    color: #1976d2; /* Mavi renk */
+    font-size: 24px;
   }
+
+  /* Input kutuları */
+  input {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 15px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+  }
+
+  /* Buton stili (Admin Girişi ile birebir aynı) */
+  button {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 5px;
+    width: 100%;
+  }
+
+    button:hover {
+      background-color: #1976d2;
+    }
 </style>

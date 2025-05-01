@@ -98,18 +98,30 @@
 <style scoped>
   .doctor-form {
     max-width: 400px;
-    margin: 0 auto;
-    padding: 2rem;
+    margin: auto;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-family: "Segoe UI", sans-serif;
+    text-align: center;
+  }
+
+  h1 {
+    margin-bottom: 20px;
+    color: #2c3e50;
   }
 
   form {
     display: flex;
     flex-direction: column;
+    text-align: left;
   }
 
   label {
     margin-top: 1rem;
-    font-weight: bold;
+    font-weight: 600;
+    color: #34495e;
   }
 
   input,
@@ -117,19 +129,39 @@
     padding: 0.5rem;
     font-size: 1rem;
     margin-top: 0.25rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
   }
 
-  button {
-    margin-top: 2rem;
-    padding: 0.75rem;
-    font-size: 1rem;
-    background-color: #2e86de;
-    color: white;
+  button[type="submit"] {
+    background-color: #28a745; /* yeşil */
+    color: #000; /* siyah yazı */
+    margin-top: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
   }
 
-    button:hover {
-      background-color: #1e5fa9;
+    button[type="submit"]:hover {
+      background-color: #218838;
+    }
+
+  button:not([type="submit"]) {
+    background-color: #6c757d;
+    color: white;
+    margin-top: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+    button:not([type="submit"]):hover {
+      background-color: #5a6268;
     }
 </style>
