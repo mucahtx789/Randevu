@@ -3,7 +3,18 @@
     <h1>Hasta Girişi</h1>
     <input v-model="tcNo" placeholder="TC Kimlik No" maxlength="11" />
     <input v-model="password" type="password" placeholder="Şifre" />
-    <button @click="login">Giriş Yap</button>
+
+    <!-- vue3-recaptcha2 -->
+    <div class="form-group">
+      <vue-recaptcha ref="recaptcha"
+                     :sitekey="siteKey"
+                     @verify="onCaptchaResolved"
+                     @expire="onCaptchaExpired"
+                     @fail="onCaptchaError"
+                     @error="onCaptchaError" />
+    </div>
+    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+    <button :disabled="!captchaToken" @click="login">Giriş Yap</button>
     <button @click="goToRegister">Hasta Kayıt </button>
     <button @click="goToAdminLogin">Admin Girişi</button>
 
@@ -17,16 +28,31 @@
     data() {
       return {
         tcNo: '',
-        password: ''
+        password: '',
+        errorMessage: '',
+        captchaToken: '',
+        siteKey: '6Ld--S4rAAAAAFspcnjYmyIEPAopgaGh43l7r-Ni' // siteKey burada
       };
     },
     methods: {
+    // reCAPTCHA doğrulama işlemi
+      onCaptchaResolved(token) {
+        this.captchaToken = token;
+      },
+      onCaptchaExpired() {
+        this.captchaToken = ''; // Token süresi bittiğinde temizlenir
+      },
+      onCaptchaError() {
+        this.errorMessage = 'reCAPTCHA doğrulaması başarısız oldu.'; // Eğer hata oluşursa kullanıcıya hata mesajı verilir
+        this.captchaToken = ''; // Token temizlenir
+      },
       async login() {
         try {
           const response = await axios.post('http://localhost:5229/api/auth/login', {
             TcNo: this.tcNo,
             Password: this.password,
-            Role: 'Patient' // Hasta girişi için rol bilgisi gönderiyoruz
+            Role: 'Patient', // Hasta girişi için rol bilgisi gönderiyoruz
+            recaptchaToken: this.captchaToken 
           });
 
           // Kontrol: gelen rol gerçekten Patient mi?
@@ -44,9 +70,9 @@
         } catch (error) {
           console.error(error);
           if (error.response) {
-            alert(error.response.data.message || 'Giriş Başarısız');
+            alert(error.response.data.message || 'Login failed');
           } else {
-            alert('Giriş Başarısız');
+            alert('Login Failed');
           }
         }
       },

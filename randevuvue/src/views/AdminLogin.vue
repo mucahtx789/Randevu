@@ -3,7 +3,19 @@
     <h1>Admin Girişi</h1>
     <input v-model="tcNo" maxlength="11" placeholder="TC Kimlik No" />
     <input v-model="password" type="password" placeholder="Şifre" />
-    <button @click="login">Giriş Yap</button>
+
+    <!-- vue3-recaptcha2 -->
+    <div class="form-group">
+      <vue-recaptcha ref="recaptcha"
+                     :sitekey="siteKey"
+                     @verify="onCaptchaResolved"
+                     @expire="onCaptchaExpired"
+                     @fail="onCaptchaError"
+                     @error="onCaptchaError" />
+    </div>
+    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+
+    <button :disabled="!captchaToken" @click="login">Giriş Yap</button>
 
     <!-- Ana Sayfaya Git butonu her zaman görünür -->
     <button @click="goToHomePage">Hasta Girişi</button>
@@ -18,9 +30,23 @@
       return {
         tcNo: '',
         password: '',
+        errorMessage: '',
+        captchaToken: '',
+        siteKey: '6Ld--S4rAAAAAFspcnjYmyIEPAopgaGh43l7r-Ni' // siteKey burada
       };
     },
     methods: {
+      // reCAPTCHA doğrulama işlemi
+      onCaptchaResolved(token) {
+        this.captchaToken = token;
+      },
+      onCaptchaExpired() {
+        this.captchaToken = ''; // Token süresi bittiğinde temizlenir
+      },
+      onCaptchaError() {
+        this.errorMessage = 'reCAPTCHA doğrulaması başarısız oldu.'; // Eğer hata oluşursa kullanıcıya hata mesajı verilir
+        this.captchaToken = ''; // Token temizlenir
+      },
       // Giriş işlemi
       async login() {
         try {
@@ -29,7 +55,8 @@
             {
               TcNo: this.tcNo,
               Password: this.password,
-              Role: 'Admin'  // Sabit olarak Admin rolünü gönderiyoruz
+              Role: 'Admin',  // Sabit olarak Admin rolünü gönderiyoruz
+              recaptchaToken: this.captchaToken 
             });
 
           console.log('Login successful', response.data); // API'den dönen yanıtı kontrol edin
@@ -47,9 +74,9 @@
         } catch (error) {
           console.error(error);  // Detaylı hata bilgisi konsola yazdırılacak
           if (error.response) {
-            alert(error.response.data.message || 'Giriş Başarısız');
+            alert(error.response.data.message || 'Login failed');
           } else {
-            alert('Giriş Başarısız');
+            alert('Login failed');
           }
         }
       },

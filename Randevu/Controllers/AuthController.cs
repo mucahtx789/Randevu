@@ -7,6 +7,7 @@ using System.Text;
 using AppointmentSystem.Data;
 using AppointmentSystem.Models;
 using Microsoft.AspNetCore.Identity.Data;
+using Randevu.Models.Dtos;
 
 namespace AppointmentSystem.Controllers
 {
@@ -27,6 +28,11 @@ namespace AppointmentSystem.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            var recaptchaValid = await VerifyRecaptchaAsync(request.recaptchaToken);
+            if (!recaptchaValid)
+                return BadRequest(new { message = "reCAPTCHA doğrulaması başarısız." });
+
+
             // var passwordhash = BCrypt.Net.BCrypt.HashPassword("123"); manuel admin kullanıcısı oluştururken sql girilcek şifre
             if (string.IsNullOrEmpty(request.TcNo) || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(request.Role))
             {
@@ -110,6 +116,23 @@ namespace AppointmentSystem.Controllers
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+        //recaptcha
+        private async Task<bool> VerifyRecaptchaAsync(string recaptchaToken)
+        {
+            var secretKey = _config["Recaptcha:SecretKey"];
+            using var httpClient = new HttpClient();
+            var content = new FormUrlEncodedContent(new[]
+            {
+        new KeyValuePair<string, string>("secret", secretKey),
+        new KeyValuePair<string, string>("response", recaptchaToken)
+    });
+
+            var response = await httpClient.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
+            var responseString = await response.Content.ReadAsStringAsync();
+            var recaptchaResult = System.Text.Json.JsonSerializer.Deserialize<RecaptchaResponse>(responseString);
+
+            return recaptchaResult?.success ?? false;
         }
     }
 }
