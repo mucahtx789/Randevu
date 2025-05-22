@@ -73,8 +73,6 @@ namespace Randevu
             // Rate Limiting middleware'i ekle
             app.UseIpRateLimiting();
 
-
-
             app.UseHttpsRedirection();
 
 

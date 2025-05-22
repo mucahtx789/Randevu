@@ -51,7 +51,7 @@
       async login() {
         try {
           const response = await axios.post(
-            'http://localhost:5229/api/auth/login',  // API URL'sini doğru girdiğinizden emin olun
+            'http://localhost:5229/api/auth/login',  
             {
               TcNo: this.tcNo,
               Password: this.password,
@@ -59,7 +59,7 @@
               recaptchaToken: this.captchaToken 
             });
 
-          console.log('Login successful', response.data); // API'den dönen yanıtı kontrol edin
+          console.log('Login successful', response.data); // API'den dönen yanıt
 
           // Kullanıcı rolüne göre işlem yapılıyor
           if (response.data.role === 'Admin') {
@@ -67,7 +67,7 @@
             localStorage.setItem('token', response.data.token);  // Token'ı localStorage'a kaydediyoruz
             localStorage.setItem('role', response.data.role);  // role bilgisini ekliyoruz
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            this.$router.push('/doctor-list');  // Başka bir sayfaya yönlendirme yapıyoruz
+            this.$router.push('/doctor-list');  // Başka bir sayfaya yönlendirme
           } else {
             alert('Yetkisiz giriş!');
           }
